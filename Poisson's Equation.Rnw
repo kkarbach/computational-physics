@@ -1,0 +1,743 @@
+%%%%%%%%%%%%%%%%%%%%%
+%% start of header %%
+%%%%%%%%%%%%%%%%%%%%%
+\documentclass [a4paper]{article}
+
+\usepackage{graphics,latexsym,geometry,amsmath,makeidx,fancyhdr,amssymb,gensymb,amsthm}
+\usepackage{sidecap,wrapfig,float}
+\usepackage[hang, small, bf]{caption}
+\renewcommand\sidecaptionsep{6pt}
+\usepackage[numbers]{natbib}
+\usepackage{graphicx}
+\usepackage{nicefrac}
+%\usepackage{enumerate}
+\usepackage[shortlabels]{enumitem}
+\usepackage{hyperref}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{quoting}
+\usepackage{lipsum}
+
+\graphicspath{ {./images/} }
+\setlength{\parindent}{0pt}
+\sidecaptionvpos{figure}{c}
+
+\makeatletter
+\def\blfootnote{\xdef\@thefnmark{}\@footnotetext}
+\makeatother
+
+<<echo=F>>=
+library(ggplot2)
+library(polynom)
+library(latex2exp)
+@
+
+\pagestyle{fancy}
+
+\title{\bf{Partial Differential Equations\\ --- \\Elliptic: Poisson's Equation}}
+\date{\Sexpr{format(Sys.Date(), '%B %d, %Y')}}
+\author{Keegan W$^{\text{m.}}$ Karbach}
+
+
+%%%%%%%%%%%%%%%%%%%%
+%%% end of header %%
+%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%
+%%% start document %%%
+%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+\begin{wrapfigure}[15]{r}{.4\textwidth}
+\centering
+\vspace{-10pt}
+\includegraphics[clip, width=1.5in]{elliptic_3}
+\caption{A general domain for a prototypical equilibrium problem}
+\end{wrapfigure}
+In this project, we examine elliptic partial differential equations. These equations are classified as having a negative discriminant and thus, complex characteristic curves. Physically this manifests as solutions that have no time dependence and are well posed to boundary value problems. As they have no physical characteristic curves, they cannot have discontinuities in the derivatives of the solution as these must propagate along these curves -- the solutions are smooth. Thus, elliptic PDEs govern equilibrium problems.\\[8pt]
+Equilibrium problems are steady-state problems in bounded domains $\Omega(x, y)$ in which the solution $\Phi(x, y)$ is governed by an elliptic PDE subject to boundary conditions specified each point on the boundary $\partial \Omega$. Equilibrium problems are solved numerically using \emph{relaxation} methods in which the entire solution is passed on by a jury of neighboring points in $\Omega$ requiring satisfaction of all internal requirements (i.e., the solution) and all the boundary conditions simultaneously. Due to the fact that elliptic PDEs have no real characteristics, the solution at every point in the solution domain is influenced by the solution at all the other points, and the solution at each point influences the solution at all the other points. Thus, these problems are characterized by continuous, twice-differentiable solutions on $\Omega$ (Figure 2).\\[8pt]
+The prototypical elliptic PDE is Poisson's equation (1), of which the Laplace equation (2) is a special case; we will examine both in this project. These equations govern the study of potential fields and therefore form a basis for an understanding of a number of fields in physics such as ideal fluid flow, mass diffusion, heat diffusion, electrostatics, and gravity.
+\begin{align}
+\nabla^2 \Phi &= - \frac{\rho}{\epsilon_0}\\
+\nabla^2 \Phi &= 0
+\end{align}
+In this project, we will explore three numerical methods for solving Laplace's equation: the Jacobi method, the Gauss-Seidel method, and Simultaneous Overrelaxation -- each a refinement of the previous. The Jacobi method is the canonical jury method; the values of each adjacent point are averaged to update the current point.
+\[
+\Phi^{n+1}_{i,j} = \frac{1}{4}\left[\Phi^{n}_{i+1,j} + \Phi^{n}_{i-1,j} + \Phi^{n}_{i,j+1} + \Phi^{n}_{i,j-1}\right]
+\]
+The Gauss-Seidel method is essentially the same as the Jacobi method, with the exception that it uses points that have already been calculated to update the current point.
+\[
+\left[  \Phi^{n}_{i-1,j} ,  \Phi^{n}_{i,j-1} \right] \longrightarrow \left[  \Phi^{n+1}_{i-1,j} ,  \Phi^{n+1}_{i,j-1} \right]
+\]
+This saves computation time and memory allocation as only one array for $\Phi$ needs to be saved -- it is updated element wise during the iteration as opposed to the Jacobi method, which builds an updated copy of the current array.\\[8pt]
+A further refinement comes with the addition of an overrelaxation parameter, lending the method of Successive Overrelaxation (SOR). This accelerates the convergence of the Gauss-Seidel method by utilizing a weighted average of the Gauss-Seidel jury method with the current iteration.
+\begin{figure}[t]
+\centering
+\includegraphics[width=2.5in]{elliptic_2}
+\caption{Jury method for solving equilibrium problems}
+\end{figure}
+
+
+
+
+\section{Problem 8.1}
+\paragraph{Evaluate the potential $\Phi(x,y)$ numerically from equation (8.15) making surface and contour plots for a variety of terms. Estimate how many terms are needed to obtain about 1\% accuracy.}\:\\[10pt]
+For reference, Garcia [***] equation (8) is
+\[
+\Phi(x,y) = \Phi_0 \sum_{n=1,3,5,\dots}^{\infty} \frac{4}{\pi n} \sin \left(\frac{n\pi x}{L_x} \right) 
+\frac{\sinh(n\pi y/L_x)}{\sinh(n\pi L_y/L_x)}
+\]
+In order to implement this as a direct numerical method, we use the function
+<<eval=F>>=
+def phi_n(n,x,y,L):
+    return (4/(np.pi*n*np.sinh(n*np.pi)))*np.sin(n*np.pi*x/L)*np.sinh(n*np.pi*y/L)
+@
+And iterate over the sum and both variables using a nested \texttt{for()} loop
+<<eval=F>>=
+for k in n_lst:
+    for i in range(N) :
+        for j in range(N) :
+            phi[i,j] = phi0 * phi_n(k, x[i], y[j], L)
+@
+The Laplace equation was solved for an initial field of $\Phi_0 = 1$ on a $50 \times 50$ grid for terms through $n=11,21,\text{and}\ 51$.\\[8pt]
+The results are as follows.
+\begin{SCfigure}[][!h]
+\includegraphics[clip, width=3in]{1_1}
+\caption{Series solution for $n=11$ terms. Note the prominent Gibbs phenomenon on the nonzero border.}
+\end{SCfigure}
+\begin{SCfigure}[][!h]
+\includegraphics[clip, width=3in]{1_2}
+\caption{Series solution for $n=21$ terms. With ten additional terms, the Gibbs phenomenon is much less pronounced.}
+\end{SCfigure}
+\begin{SCfigure}[][!h]
+\includegraphics[clip, width=3in]{1_3}
+\caption{Series solution for $n=51$ terms. With 51 terms, the Gibbs phenomenon is unnoticeable in the surface plot.}
+\end{SCfigure}
+Note that the contour plots are all identical, save for the top border which does exhibit evidence of the Gibbs phenomenon in the first and second figure. We want to investigate how many terms it will take to obtain accuracy to within one percent. One method is to only examine the nonzero border, as this is where the plot changes the most over multiple terms. Another method is to examine the entire plot, determine the residual between subsequent iterations, and calculate an error from that residual. This is the method I chose to investigate due to the fact that it seemed to be more mathematically rigorous, at least to me. I decided to use Root-Mean-Square deviation (RMSD). Often used to determine the quality of a regression model to data, this can also be used to compare differences between two varying quantities, neither of which is accepted as a standard value. The rationale here is that, as the number of terms goes to infinity, the residual between subsequent iterations will go to zero -- we want to determine when this RMSD value drops to below one percent. For two dimensions, the RMSD is defined as:
+\[
+\text{RMSD} = \sqrt{\frac{\sum_{i=1}^N\sum_{j=1}^N(\Phi_{i,j}^{n} - \Phi_{i,j}^{n-1})^2}{N^2}}
+\]
+Where $n$ is the temporal index and $N$ is the spatial index. This is implemented in Python as
+<<eval=F>>=
+# IMPLEMENTATION OF RMSD ANALYSIS
+flag = 0
+for i in range(terms-1):
+    resid[:,:,i] = delt_phi[:,:,i] - delt_phi[:,:,i+1]
+    resid2[i] = np.sqrt(sum(sum(resid[:,:,i]**2))/(N**2))
+    if resid2[i]/resid2[0]*100 < 1 and resid2[i]/resid2[0]*100 > .8 and flag == 0:
+        resid_crit = i
+        flag = 1            
+@
+The results of this analysis are shown in Figure 6 -- the critical number of terms for a one percent RMSD is $n=83$ and the values for $n={82,83,84}$ are shown circled in the inset. Here, the number of terms represents 83 \emph{odd} terms, so we would take the sum to the index variable of $i,j = 165$. The figure shows a normalized RMSD value as a percentage, for comparative purposes. Note that there are two numerical artifacts where the residual change between terms was negligible -- these were omitted from the analysis as they did not fit the functional form of the error curve.
+\begin{figure}[H]
+\centering
+\includegraphics[clip, width=3in]{1_4}
+\caption{Root-Mean-Square deviation between subsequent terms as a function of number of partial sum terms}
+\end{figure}
+
+
+
+\section{Problem 8.3}
+\subsection{Part (a)}
+\paragraph{Find the analytical solution to the three-dimensional cubic boundary value problem using separation of variables.}\:\\
+Solving the Laplace equation in three dimensions with the boundaries
+\begin{gather*}
+\Phi(x=0,y,z) = \Phi(x=L,y,z) = 0\\
+\Phi(x,y=0,z) = \Phi(x,y=L,z) = 0\\
+\Phi(x,y,z=0) = \Phi(x,y,z=L) = \Phi_0
+\end{gather*}
+begins by separating the PDE into a system of ODEs:
+\begin{gather*}
+\nabla \Phi(x,y,z) = 0\\
+Y(y)Z(z)\frac{\partial^2 X(x)}{\partial x^2} + X(x)Z(z)\frac{\partial^2 Y(y)}{\partial y^2} + X(x)Y(y)\frac{\partial^2 Z(z)}{\partial z^2} = 0\\
+\frac{1}{X(x)}\frac{d^2 X(x)}{dx^2} + \frac{1}{Y(y)}\frac{d^2 Y(y)}{dy^2} + \frac{1}{Z(z)}\frac{d^2 Z(z)}{dz^2} = 0
+\end{gather*}
+Can be recast into the ODE system
+\begin{gather*}
+\begin{cases}
+\frac{1}{X}X'' = -\left( \frac{1}{Y}Y'' + \frac{1}{Z}Z'' \right) = -\alpha^2\\
+\frac{1}{Y}Y'' =  \alpha^2 - \frac{1}{Z}Z'' = -\beta^2
+\end{cases}
+\end{gather*}
+Which is separated into the system
+\begin{gather*}
+\begin{cases}
+X'' = -\alpha^2 X\\
+Y'' = -\beta^2 Y\\
+Z'' = (\alpha^2 + \beta^2) Z
+\end{cases}
+\end{gather*}
+If we define $\gamma=\sqrt{\alpha^2 + \beta^2}$, we get the general solution:
+\[
+\Phi(x,y,z) \propto e^{\pm i \alpha x}\ e^{\pm i \beta y}\ e^{\pm \gamma z}
+\]
+We need the oscillatory exponentials in the $x$ and $y$ variables in order to force their zero boundary conditions, leaving the hyperbolic exponent for the nonzero boundaries in $z$. Applying the boundary conditions gives us:
+\begin{gather*}
+\begin{cases}
+X \sim \sin \left(\frac{n\pi}{L}x\right)\\
+Y \sim \sin \left(\frac{m\pi}{L}y\right)\\
+Z \sim \cosh \left(\frac{\gamma\pi}{L}z\right)
+\end{cases}
+\end{gather*}
+Giving us the general series solution:
+\[
+\Phi = \sum_{m=1}^\infty \sum_{n=1}^\infty A_{m,n} \left[ \sin\left(\frac{n\pi}{L}x\right) \sin\left(\frac{m\pi}{L}y\right) \cosh\left(\frac{\sqrt{m^2+n^2}\pi}{L}z\right)\right]
+\]
+We find the coefficient $A_{m,n}$ by Fourier integration, set $z=1$ and take the integral of the $x$ variable first.
+\begin{align*}
+\int_0^L \Phi_0 \sin\left(\frac{k\pi}{L}x\right)dx &= \sum_{m=1}^\infty \sum_{n=1}^\infty A_{m,n} \cosh\left(\gamma \pi \right) \sin\left(\frac{m\pi}{L}y\right) \int_0^L \sin\left(\frac{n\pi}{L}x\right)\ \sin\left(\frac{k\pi}{L}x\right) dx\\
+\left. -\frac{L\Phi_0}{k\pi}\cos\left(\frac{k\pi}{L}x\right)\right|_0^L &= \sum_{m=1}^\infty \sum_{n=1}^\infty A_{m,n} \cosh\left(\gamma \pi \right) \sin\left(\frac{m\pi}{L}y\right) \frac{L}{2} \delta_{kn}
+\end{align*}
+The delta function is zero everywhere except $n = k$, collapsing the sum over $n$.
+\[
+\frac{L\Phi_0}{k\pi}\left(1-(-1)^k\right) = \frac{L}{2} \sum_{m=1}^{\infty} A_{k,m} \cosh\left(\sqrt{k^2 + m^2}\pi \right) \sin\left(\frac{m\pi}{L}y\right)
+\]
+Repeating this procedure for the $y$ variable and solving for $A_{m,n}$ gives us:
+\[
+A_{m,n} = \frac{4\Phi_0}{mn\pi^2 \cosh\left(\sqrt{m^2 + n^2}\pi\right)} \left(1-(-1)^m\right) \left(1-(-1)^n\right)
+\]
+Note that:
+\begin{gather*}
+\left(1-(-1)^n\right)
+\begin{cases}
+0\quad n\ \text{even}\\
+2\quad n\ \text{odd}
+\end{cases}
+\end{gather*}
+Which gives us the particular series solution:
+\[
+\Phi(x,y,z) = \sum_{m\sim\text{odd}}^\infty \sum_{n\sim\text{odd}}^\infty \frac{16\Phi_0}{mn\pi^2 \cosh\left(\sqrt{m^2 + n^2}\pi\right)} \sin\left(\frac{n\pi}{L}x\right) \sin\left(\frac{m\pi}{L}y\right) \cosh\left(\frac{\sqrt{m^2+n^2}\pi}{L}z\right)
+\]
+For intermediate steps, please consult Appendix B for the pencil and paper solution.
+\subsection{Part (b)}
+\paragraph{Numerically solve the analytical solution and plot values for $z=L/4$ and $z=L/2$}\:\\
+Implementation of the direct numerical solution is much the same as Problem 8.1. The results are as follows in Figures 7 and 8; the contour level spacing is equivalent over both plots to better show the differences in the magnitude of the scalar field between the two plots as their functional form is very similar. The solutions were taken to 11 terms.
+\begin{SCfigure}[][t]
+\includegraphics[clip, width=3in]{3_1}
+\caption{Series solution for $n=11$ terms at $z=L/4$.}
+\end{SCfigure}
+\begin{SCfigure}[][h]
+\includegraphics[clip, width=3in]{3_2}
+\caption{Series solution for $n=11$ terms at $z=L/2$.}
+\end{SCfigure}
+\subsection{Part (c)}
+\paragraph{Numerically solve the physical system using relaxation methods and plot values for $z=L/4$ and $z=L/2$}\:\\
+Implementation of the relaxation method solution is as follows in Figures 9 and 10; I chose to use the Gauss-Seidel method.
+<<eval=F>>=
+for iter in range(iterMax) :
+    changeSum = 0
+    ## G-S method ##
+    for i in range(1,N-1) :
+        for j in range(1,N-1) : 
+            for k in range(1,N-1):
+                temp = ( phi[i+1,j,k] + phi[i-1,j,k] +
+                         phi[i,j-1,k] + phi[i,j+1,k] +
+                         phi[i,j,k-1] + phi[i,j,k+1] ) / 6
+                changeSum += abs( 1 - phi[i,j,k]/temp )
+                phi[i,j,k] = temp
+@
+The results are as follows; the contour level spacing is equivalent over both plots and to the solution in part (b) to better show the differences in the magnitude of the scalar field between the plots as their functional forms are very similar.
+\begin{SCfigure}[][!h]
+\includegraphics[clip, width=3in]{3_3}
+\caption{Relaxation solution for $n=11$ terms at $z=L/4$.}
+\end{SCfigure}
+\begin{SCfigure}[][!h]
+\includegraphics[clip, width=3in]{3_4}
+\caption{Relaxation solution for $n=11$ terms at $z=L/2$.}
+\end{SCfigure}
+We can see that the relaxation method gives solutions almost identical to the ones in part (b) with the percent difference \Sexpr{round(100*(.067 - .058)/(.5*(.067+.058)),3)}\% in the $L/4$ measurement and \Sexpr{round(100*(.178 - .177)/(.5*(.178+.177)),3)}\% for the $L/2$ measurement. As expected the scalar potential is greater at $z=L/2$ than it is at $z=L/4$.
+
+
+
+\section{Problem 8.4}
+\subsection{Part (a)}
+<<include=F>>=
+n <- c(10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42,
+       44, 46, 48, 50)
+i <- c(47,  63,  80,  95, 110, 124, 137, 155, 177, 200, 224, 250, 276,
+       304, 332, 361, 392, 422, 454, 486, 518)
+n2 <- n^2
+dat1 <- cbind.data.frame(n,n2,i)
+my.reg <- lm(log(i)~log(n), data = dat1)
+my.reg2 <- lm(i~n+n2, data = dat1)
+my.reg3 <- lm(log(i)~n, data = dat1)
+summary(my.reg)
+summary(my.reg2)
+summary(my.reg3)
+a <- exp(coef(my.reg)[1])
+b <- coef(my.reg)[2]
+a1 <- coef(my.reg2)[1]
+a2 <- coef(my.reg2)[2]
+a3 <- coef(my.reg2)[3]
+b1 <- exp(coef(my.reg3)[1])
+b2 <- coef(my.reg3)[2]
+plot_x <- seq(10,50,length.out = 100)
+plot_y <- a * plot_x^b
+plot_y2 <- a1 + a2*plot_x + a3*plot_x^2
+plot_y3 <- b1*exp(b2*plot_x)
+colors <- c('Quadratic' = 'red', 'Power Law' = 'blue', 'Exponential' = 'green3')
+label.text <- paste(' PL R^2:', round(summary(my.reg)$r.squared,5),
+                    '\n Quad R^2:', round(summary(my.reg2)$r.squared,5),
+                    '\n Exp R^2:', round(summary(my.reg3)$r.squared,5))
+ggplot() +
+  geom_point(aes(n,i),data = dat1,
+             alpha=2/10, shape=21, fill="blue", colour="black", size=5) +
+  geom_line(aes(plot_x,plot_y,color = 'Power Law'), cex = 1) +
+  geom_line(aes(plot_x,plot_y2,color = 'Quadratic'), size = 1) +
+  geom_line(aes(plot_x,plot_y3,color = 'Exponential'), size = 1) +
+  xlim(c(10,50)) +
+  labs(title = 'Runtime impact: System size',
+       subtitle = 'Jacobi - Reasonable Initial Guess',
+       x = 'Grid Points',
+       y = 'Iterations',
+       color = 'Regression') +
+  theme(plot.title = element_text(size = 18, face = 'bold'),
+        plot.subtitle = element_text(size = 14, face = 'italic')) +
+  scale_color_manual(values = colors) +
+  annotate(geom = "text", x = 10, y = max(i), label = label.text,
+           family = "serif", hjust = 0, size = 4)
+@
+
+\paragraph{Examine the impact of grid size on the performance of the Jacobi method using a reasonable initial guess (first partial sum).}\:\\
+In order to fit a function to extrapolate impact outside of the given range of $N=[10,50]$, a series of 21 evenly-spaced values was taken. The Jacobi method was initialized with a reasonable initial guess. Figure 11 shows the number of iterations as a function of grid size. Three regression models were fit to the data:
+\begin{align*}
+\hat{Y}_P =& \beta_1 \cdot X^{\beta_2}\\
+\hat{Y}_Q =& \beta_1 + \beta_2 X + \beta_3 X^2\\
+\hat{Y}_E =& \beta_1 + e^{\beta_2 X}
+\end{align*}
+The first model is the canonical `power-law', the second model is a quadratic model, and the third is an exponential model. The equations of the models will be listed with each regression analysis.
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.5in]{4_1}
+\caption{Analysis of runtime impact for the Jacobi method with a reasonable initial guess}
+\end{figure}
+The quadratic model appears to fit the model best and has the highest $R^2$ value. The equations are as follows:
+\begin{align*}
+\hat{Y}_P =& \Sexpr{round(a,2)} \cdot X^{\Sexpr{round(b,2)}}\\
+\hat{Y}_Q =& \Sexpr{round(a1,2)} + \Sexpr{round(a2,2)} X + \Sexpr{round(a3,2)} X^2\\
+\hat{Y}_E =& \Sexpr{round(b1,2)} + e^{\Sexpr{round(b2,2)} X}
+\end{align*}
+
+\subsection{Part (b)}
+\paragraph{Examine the impact of grid size on the performance of the Jacobi method using a poor initial guess (zeros on the interior).}\:\\
+I noticed that the Jacobi method was numerically unstable for an initial guess of zero, so I initialized the interior points to a very small number. Figure 12 shows the results of this analysis.
+<<include=F>>=
+n <- c(10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42,
+       44, 46, 48, 50)
+n2 <- n^2
+i <- c(113,  159,  212,  269,  332,  399,  470,  544,  623,  704,  789,
+        876,  966, 1058, 1153, 1250, 1349, 1450, 1552, 1657, 1762)
+dat1 <- cbind.data.frame(n,n2,i)
+my.reg <- lm(log(i)~log(n), data = dat1)
+my.reg2 <- lm(i~n+n2, data = dat1)
+my.reg3 <- lm(log(i)~n, data = dat1)
+summary(my.reg)
+summary(my.reg2)
+summary(my.reg3)
+a <- exp(coef(my.reg)[1])
+b <- coef(my.reg)[2]
+a1 <- coef(my.reg2)[1]
+a2 <- coef(my.reg2)[2]
+a3 <- coef(my.reg2)[3]
+b1 <- exp(coef(my.reg3)[1])
+b2 <- coef(my.reg3)[2]
+plot_x <- seq(10,50,length.out = 100)
+plot_y <- a * plot_x^b
+plot_y2 <- a1 + a2*plot_x + a3*plot_x^2
+plot_y3 <- b1*exp(b2*plot_x)
+colors <- c('Quadratic' = 'red', 'Power Law' = 'blue', 'Exponential' = 'green3')
+label.text <- paste(' PL R^2:', round(summary(my.reg)$r.squared,5),
+                    '\n Quad R^2:', round(summary(my.reg2)$r.squared,5),
+                    '\n Exp R^2:', round(summary(my.reg3)$r.squared,5))
+ggplot() +
+  geom_point(aes(n,i),data = dat1,
+             alpha=2/10, shape=21, fill="blue", colour="black", size=5) +
+  geom_line(aes(plot_x,plot_y,color = 'Power Law'), cex = 1) +
+  geom_line(aes(plot_x,plot_y2,color = 'Quadratic'), size = 1) +
+  geom_line(aes(plot_x,plot_y3,color = 'Exponential'), size = 1) +
+  labs(title = 'Runtime impact: System size',
+       subtitle = 'Jacobi - Poor Initial Guess',
+       x = 'Grid Points',
+       y = 'Iterations',
+       color = 'Regression') +
+  theme(plot.title = element_text(size = 18, face = 'bold'),
+        plot.subtitle = element_text(size = 14, face = 'italic')) +
+  scale_color_manual(values = colors) +
+  annotate(geom = "text", x = 10, y = max(i), label = label.text,
+           family = "serif", hjust = 0, size = 4)
+@
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.5in]{4_2}
+\caption{Analysis of runtime impact for the Jacobi method with a poor initial guess}
+\end{figure}
+The quadratic model again appears to fit the model best and has the highest $R^2$ value. The equations are as follows:
+\begin{align*}
+\hat{Y}_P =& \Sexpr{round(a,2)} \cdot X^{\Sexpr{round(b,2)}}\\
+\hat{Y}_Q =& \Sexpr{round(a1,2)} + \Sexpr{round(a2,2)} X + \Sexpr{round(a3,2)} X^2\\
+\hat{Y}_E =& \Sexpr{round(b1,2)} + e^{\Sexpr{round(b2,2)} X}
+\end{align*}
+Note that the number of iterations is more than three times greater with a poor initial guess than it is with a reasonable initial guess.
+
+\subsection{Part (c)}
+\paragraph{Examine the impact of grid size on the performance of the SOR method using a reasonable initial guess.}\:\\
+Here, the SOR method was implemented with the initial condition set as the first partial sum.
+<<include=F>>=
+n <- c(10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42,
+       44, 46, 48, 50)
+n2 <- n^2
+i <- c(23,  28,  33,  38,  43,  48,  53,  58,  63,  68,  72,  77,  82,
+        87,  92,  97, 101, 106, 111, 116, 121)
+dat1 <- cbind.data.frame(n,n2,i)
+my.reg <- lm(log(i)~log(n), data = dat1)
+my.reg2 <- lm(i~n+n2, data = dat1)
+my.reg3 <- lm(log(i)~n, data = dat1)
+summary(my.reg)
+summary(my.reg2)
+summary(my.reg3)
+a <- exp(coef(my.reg)[1])
+b <- coef(my.reg)[2]
+a1 <- coef(my.reg2)[1]
+a2 <- coef(my.reg2)[2]
+a3 <- coef(my.reg2)[3]
+b1 <- exp(coef(my.reg3)[1])
+b2 <- coef(my.reg3)[2]
+plot_x <- seq(10,50,length.out = 100)
+plot_y <- a * plot_x^b
+plot_y2 <- a1 + a2*plot_x + a3*plot_x^2
+plot_y3 <- b1*exp(b2*plot_x)
+colors <- c('Quadratic' = 'red', 'Power Law' = 'blue', 'Exponential' = 'green3')
+label.text <- paste(' PL R^2:', round(summary(my.reg)$r.squared,5),
+                    '\n Quad R^2:', round(summary(my.reg2)$r.squared,5),
+                    '\n Exp R^2:', round(summary(my.reg3)$r.squared,5))
+ggplot() +
+  geom_point(aes(n,i),data = dat1,
+             alpha=2/10, shape=21, fill="blue", colour="black", size=5) +
+  geom_line(aes(plot_x,plot_y,color = 'Power Law'), cex = 1) +
+  geom_line(aes(plot_x,plot_y2,color = 'Quadratic'), size = 1) +
+  geom_line(aes(plot_x,plot_y3,color = 'Exponential'), size = 1) +
+  labs(title = 'Runtime impact: System size',
+       subtitle = 'SOR - Reasonable Initial Guess',
+       x = 'Grid Points',
+       y = 'Iterations',
+       color = 'Regression') +
+  theme(plot.title = element_text(size = 18, face = 'bold'),
+        plot.subtitle = element_text(size = 14, face = 'italic')) +
+  scale_color_manual(values = colors) +
+  annotate(geom = "text", x = 10, y = max(i), label = label.text,
+           family = "serif", hjust = 0, size = 4)
+@
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.5in]{4_3}
+\caption{Analysis of runtime impact for the SOR method with a reasonable initial guess}
+\end{figure}
+The quadratic model again appears to fit the model best and has the highest $R^2$ value. The equations are as follows:
+\begin{align*}
+\hat{Y}_P =& \Sexpr{round(a,2)} \cdot X^{\Sexpr{round(b,2)}}\\
+\hat{Y}_Q =& \Sexpr{round(a1,2)} + \Sexpr{round(a2,2)} X + \Sexpr{round(a3,2)} X^2\\
+\hat{Y}_E =& \Sexpr{round(b1,2)} + e^{\Sexpr{round(b2,2)} X}
+\end{align*}
+The number of iterations for the SOR method is a fifth of what were required for the Jacobi method, illustrating the accelerated rate of convergence inherent in the method. The function is almost linear, hence the exponential coefficient being close to one and the quadratic term coefficient being zero. Here both the power law and quadratic models are almost equivalent.
+
+
+\subsection{Part (c)}
+\paragraph{Examine the impact of grid size on the performance of the SOR method using a poor initial guess (zeros on the interior).}\:\\
+Here, the SOR method was implemented with the interior array initialized to a very small number.
+<<include=F>>=
+n <- c(10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42,
+       44, 46, 48, 50)
+n2 <- n^2
+i <- c(23,  28,  33,  38,  43,  48,  53,  58,  63,  68,  72,  77,  82,
+        87,  92,  97, 101, 106, 111, 116, 121)
+dat1 <- cbind.data.frame(n,n2,i)
+my.reg <- lm(log(i)~log(n), data = dat1)
+my.reg2 <- lm(i~n+n2, data = dat1)
+my.reg3 <- lm(log(i)~n, data = dat1)
+summary(my.reg)
+summary(my.reg2)
+summary(my.reg3)
+a <- exp(coef(my.reg)[1])
+b <- coef(my.reg)[2]
+a1 <- coef(my.reg2)[1]
+a2 <- coef(my.reg2)[2]
+a3 <- coef(my.reg2)[3]
+b1 <- exp(coef(my.reg3)[1])
+b2 <- coef(my.reg3)[2]
+plot_x <- seq(10,50,length.out = 100)
+plot_y <- a * plot_x^b
+plot_y2 <- a1 + a2*plot_x + a3*plot_x^2
+plot_y3 <- b1*exp(b2*plot_x)
+colors <- c('Quadratic' = 'red', 'Power Law' = 'blue', 'Exponential' = 'green3')
+label.text <- paste(' PL R^2:', round(summary(my.reg)$r.squared,5),
+                    '\n Quad R^2:', round(summary(my.reg2)$r.squared,5),
+                    '\n Exp R^2:', round(summary(my.reg3)$r.squared,5))
+ggplot() +
+  geom_point(aes(n,i),data = dat1,
+             alpha=2/10, shape=21, fill="blue", colour="black", size=5) +
+  geom_line(aes(plot_x,plot_y,color = 'Power Law'), cex = 1) +
+  geom_line(aes(plot_x,plot_y2,color = 'Quadratic'), size = 1) +
+  geom_line(aes(plot_x,plot_y3,color = 'Exponential'), size = 1) +
+  labs(title = 'Runtime impact: System size',
+       subtitle = 'SOR - Poor Initial Guess',
+       x = 'Grid Points',
+       y = 'Iterations',
+       color = 'Regression') +
+  theme(plot.title = element_text(size = 18, face = 'bold'),
+        plot.subtitle = element_text(size = 14, face = 'italic')) +
+  scale_color_manual(values = colors) +
+  annotate(geom = "text", x = 10, y = max(i), label = label.text,
+           family = "serif", hjust = 0, size = 4)
+
+@
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.5in]{4_4}
+\caption{Analysis of runtime impact for the SOR method with a poor initial guess}
+\end{figure}
+The SOR method with a poor initial guess is identical to the SOR method with a reasonable initial guess. The equations are as follows:
+\begin{align*}
+\hat{Y}_P =& \Sexpr{round(a,2)} \cdot X^{\Sexpr{round(b,2)}}\\
+\hat{Y}_Q =& \Sexpr{round(a1,2)} + \Sexpr{round(a2,2)} X + \Sexpr{round(a3,2)} X^2\\
+\hat{Y}_E =& \Sexpr{round(b1,2)} + e^{\Sexpr{round(b2,2)} X}
+\end{align*}
+The power law model allows us a good single metric to determine the impact of grid size on computational performance with the exponential coefficient. The closer this exponent is to one, the closer to linear the runtime impact is. As the exponent grows, we can see that larger grid sizes will have a larger impact.
+
+\section{Problem 8.7}
+\paragraph{Use the \texttt{relax} program to calculate the electric field from the scalar potential calculated from the physical system given in problem 1}\:\\
+The electric field is given by:
+\[
+\textbf{E} = -\nabla\Phi
+\]
+This is implemented in Python as
+<<eval=F>>=
+[Ex, Ey] = np.gradient(np.flipud(np.rot90(phi))) 
+for i in range(N) :
+    for j in range(N) :
+        magnitude = np.sqrt(Ex[i,j]**2 + Ey[i,j]**2)         
+        Ex[i,j] /= -magnitude     # Normalize components so
+        Ey[i,j] /= -magnitude     # vectors have equal length
+        Ex[i,j] /= -1     # Normalize components so
+        Ey[i,j] /= -1     # vectors have equal length
+Ex = Ex[~np.isnan(Ex)]
+Ey = Ey[~np.isnan(Ey)]
+...
+plt.quiver(Xp,Yp,Ey,Ex,np.flipud(np.rot90(phi)), scale = 60)  # Vector field
+@
+Inside the iteration, there are two pairs of transforms for the electric field values. In the first, the arrows are normalized and negated to give us the proper direction. The second pair of transforms simply negates the value, allowing the magnitude of the arrows to be proportional to their value. There are boundary points where the scalar field is zero, causing \texttt{NaN} values in the electric field plot that must be removed.
+\begin{figure}[H]
+\centering
+\includegraphics[width=2.6in]{7_1}
+\caption{Homogeneous electric field vectors plotted over contour map of scalar field}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=2.6in]{7_2}
+\caption{Proportional electric field vectors plotted over contour map of scalar field}
+\end{figure}
+
+
+\section{Problem 8.8}
+\paragraph{Faraday cage}\:\\
+I did this problem by accident before I realized that it wasn't assigned, so then I changed it around a bit and made the Faraday cage continuous. Producing the results in Figures 17 and 18.
+\begin{figure}[H]
+\centering
+\includegraphics[width=3in]{8_1}
+\caption{Potential around a Faraday cage. Coarse contours}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=3in]{8_2}
+\caption{Potential around a Faraday cage. Fine contours.}
+\end{figure}
+
+
+\section{Problem 8.10}
+\subsection{Part (a)}
+\paragraph{Solve the two-dimensional Poisson equation for a single line charge in a square domain with Dirichlet boundary conditions of $\Phi=0$ and compare to the scalar potential field of a single charge in free space.}\:\\
+As this problem is a comparative exercise, I decided to normalize the potential values -- I removed any constants from the system and set the charge density of the source to one. This made the implementation very simple; the source was held constant over the iteration and the solution was allowed to converge identically to the method that was used for solving the Laplace equation.
+<<eval=F>>=
+phi[24,24] = charge
+...
+for iter in range(iterMax) :
+    changeSum = 0
+    for i in range(1,N-1) : 
+        for j in range(1,N-1) :
+            temp = .25*omega*( phi[i+1,j] + phi[i-1,j] + 
+                               phi[i,j-1] + phi[i,j+1] ) + (1-omega)*phi[i,j]
+
+            changeSum += abs( 1 - phi[i,j]/temp )
+            phi[i,j] = temp
+            phi[24,24] = charge
+@
+\begin{figure}[H]
+\centering
+\includegraphics[width=3in]{10_1}
+\caption{Potential of line charge with Dirichlet boundary conditions}
+\end{figure}
+Which led to the results given in Figure 19. The contours are set a one-tenth of the charge density of the line charge. The field of a charge in free space is given as:
+\[
+\phi \propto \frac{1}{r}
+\]
+We can plainly see the inverse radial dependence of the numerical solution to the Poisson equation in the figure. The potential does drop off more rapidly than would be expected analytically, as the solution needs to be continuous and smooth from the source to the boundaries, which are held at zero. These boundary interactions also distort the contours, which we would expect to be circular, to a more rectangular shape as the contours approach the boundary.
+
+\subsection{Part(b)}
+\paragraph{Implement periodic boundary conditions and compare with the results from part (a).}\:\\
+Implementation of periodic boundary conditions was a matter of adding two conditions for each pair of opposite walls.
+<<eval=F>>=
+phi[:,0] = phi[:,N-2]; phi[:,N-1] = phi[:,1]     #Top and bottom
+phi[0,:] = phi[N-2,:]; phi[N-1,:] = phi[1,:]     #Left and right
+@
+\begin{figure}[H]
+\centering
+\includegraphics[width=3in]{10_3}
+\caption{Potential of line charge with periodic boundary conditions}
+\end{figure}
+This led to the results shown in Figure 20. Note that the minimum potential here is much higher than it is in the case with Dirichlet conditions. Periodic boundaries for this physical system represent an infinite rectilinear grid of line charges; the potential of a line charge is radial, leading to the interesting pattern of contours that are exhibited in the figure. We can also see that the values of the potential fall off more slowly than they did in part (a) due to the fact that they are not forced to zero at the boundaries.
+
+\subsection*{Extras}
+I wanted to see what would happen with Neumann boundaries as well, the results are in Figure 21.
+\begin{figure}[H]
+\centering
+\includegraphics[width=3in]{10_5}
+\caption{Potential of line charge with Neumann boundary conditions}
+\end{figure}
+With contour spacing equivalent to parts (a) and (b), we can see the type of radial behavior that would be more expected from a charge in free space, as the boundaries do not interfere with the value of phi.\\[8pt]
+I then decided to run simulations for an off-center charge distribution for both Neumann and periodic boundary conditions to ensure that they were correctly implemented.
+\begin{figure}[H]
+\centering
+\includegraphics[width=3in]{10_2}
+\caption{Potential of off-center line charge with Neumann boundary conditions}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=3in]{10_4}
+\caption{Potential of off-center line charge with periodic boundary conditions}
+\end{figure}
+Boy, that sure does look cool! Incidentally, this is also the behavior that we would expect from correctly implemented Neumann and periodic boundary conditions.
+
+<<include=F>>=
+#### Long run SOR
+i = c(23,  48,  72,  97, 121, 144, 168, 192, 215, 238, 262, 285, 308,
+      331, 355)
+n = c(10,  20,  30,  40,  50,  60,  70,  80,  90, 100, 110, 120, 130,
+       140, 150)
+n2 = n^2
+dat1 <- cbind.data.frame(n,n2,i)
+my.reg <- lm(log(i)~log(n), data = dat1)
+my.reg2 <- lm(i~n+n2, data = dat1)
+my.reg3 <- lm(log(i)~n, data = dat1)
+summary(my.reg)
+summary(my.reg2)
+summary(my.reg3)
+a <- exp(coef(my.reg)[1])
+b <- coef(my.reg)[2]
+a1 <- coef(my.reg2)[1]
+a2 <- coef(my.reg2)[2]
+a3 <- coef(my.reg2)[3]
+b1 <- exp(coef(my.reg3)[1])
+b2 <- coef(my.reg3)[2]
+plot_x <- seq(10,50,length.out = 100)
+plot_y <- a + plot_x^b
+plot_y2 <- a1 + a2*plot_x + a3*plot_x^2
+plot_y3 <- b1*exp(b2*plot_x)
+colors <- c('Quadratic' = 'red', 'Power Law' = 'blue', 'Exponential' = 'green3')
+label.text <- paste('Dominant exponent:', round(my.reg2$coefficients[2],3))
+ggplot() +
+  geom_point(aes(n,i),data = dat1,
+             alpha=2/10, shape=21, fill="blue", colour="black", size=5) +
+  geom_line(aes(plot_x,plot_y,color = 'Power Law'), cex = 1) +
+  geom_line(aes(plot_x,plot_y2,color = 'Quadratic'), size = 1) +
+  geom_line(aes(plot_x,plot_y3,color = 'Exponential'), size = 1) +
+  labs(title = 'Runtime impact: System size',
+       subtitle = 'SOR - Reasonable Initial Guess',
+       x = 'Grid Points',
+       y = 'Iterations',
+       color = 'Regression') +
+  theme(plot.title = element_text(size = 18, face = 'bold'),
+        plot.subtitle = element_text(size = 14, face = 'italic')) +
+  scale_color_manual(values = colors) +
+  annotate(geom = "text", x = 10, y = max(i), label = label.text,
+           family = "serif", hjust = 0, size = 4)
+
+@
+
+<<include=F>>=
+### Long rund Jacobi
+n = c(10,  20,  30,  40,  50,  60,  70,  80,  90, 100, 110, 120, 130,
+       140, 150)
+n2 = n^2
+i <- c(47,  124,  224,  361,  518,  689,  869, 1054, 1241, 1428, 1614,
+       1795, 1971, 2142, 2306)
+dat1 <- cbind.data.frame(n,n2,i)
+my.reg <- lm(log(i)~log(n), data = dat1)
+my.reg2 <- lm(i~n+n2, data = dat1)
+my.reg3 <- lm(log(i)~n, data = dat1)
+my.reg4 <- lm(i~n,data = dat1)
+summary(my.reg)
+summary(my.reg2)
+summary(my.reg3)
+summary(my.reg4)
+a <- exp(coef(my.reg)[1])
+b <- coef(my.reg)[2]
+a1 <- coef(my.reg2)[1]
+a2 <- coef(my.reg2)[2]
+a3 <- coef(my.reg2)[3]
+b1 <- exp(coef(my.reg3)[1])
+b2 <- coef(my.reg3)[2]
+c1 <- coef(my.reg4)[1]
+c2 <- coef(my.reg4)[2]
+plot_x <- seq(min(n),max(n),length.out = 100)
+plot_y <- a + plot_x^b
+plot_y2 <- a1 + a2*plot_x + a3*plot_x^2
+plot_y3 <- b1*exp(b2*plot_x)
+plot_y4 <- c1+c2*plot_x
+colors <- c('Quadratic' = 'red', 'Power Law' = 'blue', 'Exponential' = 'green3','Linear'='orange')
+label.text <- paste('Dominant exponent:', round(my.reg2$coefficients[3],3))
+ggplot() +
+  geom_point(aes(n,i),data = dat1,
+             alpha=2/10, shape=21, fill="blue", colour="black", size=5) +
+  geom_line(aes(plot_x,plot_y,color = 'Power Law'), cex = 1) +
+  geom_line(aes(plot_x,plot_y2,color = 'Quadratic'), size = 1) +
+  geom_line(aes(plot_x,plot_y3,color = 'Exponential'), size = 1) +
+  geom_line(aes(plot_x,plot_y4,color = 'Linear'),size = 1) +
+  xlim(c(min(n),max(n))) +
+  labs(title = 'Runtime impact: System size',
+       subtitle = 'Jacobi - Reasonable Initial Guess',
+       x = 'Grid Points',
+       y = 'Iterations',
+       color = 'Regression') +
+  theme(plot.title = element_text(size = 18, face = 'bold'),
+        plot.subtitle = element_text(size = 14, face = 'italic')) +
+  scale_color_manual(values = colors) +
+  annotate(geom = "text", x = 10, y = max(i), label = label.text,
+           family = "serif", hjust = 0, size = 4)
+@
+
+\rhead{\emph{CONCLUSION}}
+\lhead{}
+\section*{Conclusion}
+In this project we have examined jury and relaxation methods for use in numerically solving elliptic partial differential equations. We have utilized the Jacobi method: a prototypical method that solves for an interior point by taking the average of the adjacent points, the Gauss-Seidel method: a refinement of the Jacobi method that uses the most updated set of points in its average, and the SOR method which introduces an overrelaxation parameter $(\omega)$ to improve on the convergence of the Gauss-Seidel method.\\[8pt]
+We compared our numerical schemes with direct numerical simulations of the analytical infinite series solutions to the elliptic equations that were being investigated -- both two- and three-dimensionally. We then examined the effect of both grid size and quality of initial guess on the convergence rate of both the Jacobi method and the SOR method, discovering that SOR is much more resistant to poor initial guesses and that the convergence rate of SOR is a substantial improvement over the Jacobi method. Following this, we proceeded to calculate the electric field from the numerically solved scalar potential field and plotted the results. Finally, we extended our methods to contain a source term in the domain (the Poisson equation) with varying boundary conditions to compare to a well-known physical system.\\[8pt]
+The technical implementation in this project was very straightforward, although I would like to further investigate optimization schemes for many of the code fragments -- the 3-dimensional Laplacian series solution turned out to be a five level nested loop and I'm sure that there are ways of flattening those loops to significantly improve performance. I very much enjoyed the regression analysis (which was done in R as opposed to Python) and the physical implications of the power law model. The majority of difficulty in this project turned out to be in plotting functions, specifically figuring out how to implement the quiver plot for the electric field, but I am pleased with the results produced. Another difficulty was the analytical solution to the 3-dimensional Laplace equation; I've done this same problem before, but it doesn't make it any easier. This is a strong argument in favor of numerical methods, as the numerical scheme was much easier to implement than the analytical, that and even after the analytical solution was found, we still needed to implement it numerically to get any visualizable results.
+\section*{Appendices}
+\begin{enumerate}[A:]
+\item Code
+\item Analytical solution to 3-dimensional Laplace equation
+\end{enumerate}
+
+
+
+%\bibliographystyle{plainnat}
+%\nocite{*}
+%\bibliography{Project4}
+\end{document}
+
+%%%%%%%%%%%%%%%%%%%%%%
+%%%% end document %%%%
+%%%%%%%%%%%%%%%%%%%%%%
+
+

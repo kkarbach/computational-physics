@@ -1,0 +1,137 @@
+%%%%%%%%%%%%%%%%%%%%%
+%% start of header %%
+%%%%%%%%%%%%%%%%%%%%%
+\documentclass [a4paper]{article}
+
+\usepackage{graphics,latexsym,geometry,amsmath,makeidx,fancyhdr,amssymb,gensymb,amsthm}
+\usepackage{sidecap,wrapfig,float}
+\usepackage[hang, small, bf]{caption}
+\renewcommand\sidecaptionsep{6pt}
+\usepackage[numbers]{natbib}
+\usepackage{graphicx}
+\usepackage{nicefrac}
+%\usepackage{enumerate}
+\usepackage[shortlabels]{enumitem}
+\usepackage{hyperref}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{quoting}
+\usepackage{lipsum}
+
+<<echo=FALSE>>=
+#opts_chunk$set(engine='python')
+@
+
+\graphicspath{ {./images/} }
+\setlength{\parindent}{0pt}
+\sidecaptionvpos{figure}{c}
+
+\makeatletter
+\def\blfootnote{\xdef\@thefnmark{}\@footnotetext}
+\makeatother
+
+
+\pagestyle{fancy}
+
+\title{\bf{Partial Differential Equations\\ --- \\Hyperbolic: Advection Equation}}
+\date{\Sexpr{format(Sys.Date(), '%B %d, %Y')}}
+\author{Keegan W$^{\text{m.}}$ Karbach}
+
+
+%%%%%%%%%%%%%%%%%%%%
+%%% end of header %%
+%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%
+%%% start document %%%
+%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+Hyperbolic partial differential equations are a class of equation that has oscillatory solutions. The canonical equations for this classification of PDE is the one-dimensional wave equation:
+\[
+\frac{\partial^2 u(x,t)}{\partial t^2} = c^2\frac{\partial^2 u(x,t)}{\partial x^2}
+\]
+In this project, we will examine the reduced form of this equation. The linear advection equation:
+\[
+\frac{\partial u(x,t)}{\partial t} = -c\frac{\partial u(x,t)}{\partial x}
+\]
+This equation is a strictly uni-directional version of the wave equation which represents the transport of a field described by $u(x,t)$ transported linearly without deformation with a velocity of c.\\[8pt]
+We will explore the advection equation using the FTCS scheme, which can be shown as unstable for all time steps, the Lax scheme, and the Lax-Wendroff scheme. We will examine the stability of the final two schemes using Von Neumann stability analysis, and then we will extend our analysis further. We will look at the linear advection-diffusion equation, and then we will implement two other schemes and examine their stability criteria.
+
+\section{Problem 7.2}
+\emph{Modify the} \texttt{advect} \emph{program to utilize dirichlet boundary conditions and report your findings while varying $\tau$ and $\omega$}\\[10pt]
+While using $N=50$, $\omega=10\pi$, and $\tau=.015$ we get the following figures:
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.7in]{1_1}
+\includegraphics[width=3.7in]{1_2}
+\includegraphics[width=3.7in]{1_3}
+\caption{FTCS, Lax, and Lax-Wendroff methods for $\tau=.015$}
+\end{figure}
+We can notice that the FTCS method is unstable, the Lax method suffers from severe damping due to its artifical `viscosity', and the Lax-Wendroff method suffers from some damping, but it is much less pronounced than the Lax method.\\[8pt]
+While using $N=50$, $\omega=10\pi$, and $\tau=.02$ we get the following figures:
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.7in]{1_4}
+\includegraphics[width=3.7in]{1_5}
+\includegraphics[width=3.7in]{1_6}
+\caption{FTCS, Lax, and Lax-Wendroff methods for $\tau=.02$}
+\end{figure}
+We can see that the FTCS method is still unstable, but the Lax and Lax-Wendroff methods are completely stable due to the fact that the CFL condition is exactly satisfied.
+While using $N=50$, $\omega=10\pi$, and $\tau=.03$ we get the following figures:
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.7in]{1_7}
+\includegraphics[width=3.7in]{1_8}
+\includegraphics[width=3.7in]{1_9}
+\caption{FTCS, Lax, and Lax-Wendroff methods for $\tau=.03$}
+\end{figure}
+Note that, due to the fact that $\tau$ is greater than $\tau_{max}$, all three methods are unstable.\\[8pt]
+Now we will vary the frequency, using a time step of $\tau=.02$.
+While using $N=50$, $\omega=5\pi$, and $\tau=.02$ we get the following figures:
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.7in]{1_10}
+\includegraphics[width=3.7in]{1_11}
+\includegraphics[width=3.7in]{1_12}
+\caption{FTCS, Lax, and Lax-Wendroff methods for $\omega=5\pi$}
+\end{figure}
+We can see that the FTCS method is still unstable, and the Lax and Lax-Wendroff methods are completely stable. The frequency of the final waveform is less than the previous investigation. Note that the solution appears smoother than when $\omega=10\pi$ due to the lower frequency with the same spatial discretization.
+While using $N=50$, $\omega=15\pi$, and $\tau=.02$ we get the following figures:
+\begin{figure}[H]
+\centering
+\includegraphics[width=3.7in]{1_13}
+\includegraphics[width=3.7in]{1_14}
+\includegraphics[width=3.7in]{1_15}
+\caption{FTCS, Lax, and Lax-Wendroff methods for $\omega=15\pi$}
+\end{figure}
+The features are much the same as the previous run, with the exception that the final waveforms of the Lax and Lax-Wendroff methods have a larger frequency and a choppier appearance.
+
+
+\section{Problem 7.3}
+\emph{Derive the solution for the linear advection-diffusion equation in pencil}
+Please see appendix B.1 for the solution for the linear advection-diffusion equation.
+
+
+\section{Problem 7.4}
+\emph{Create a numerical solution for the linear advection-diffusion equation}
+\section*{Appendices}
+\begin{enumerate}[A:]
+\item Code
+\end{enumerate}
+
+%\citep{kendall}
+
+%\bibliographystyle{plainnat}
+%\nocite{*}
+%\bibliography{Project4}
+\end{document}
+
+%%%%%%%%%%%%%%%%%%%%%%
+%%%% end document %%%%
+%%%%%%%%%%%%%%%%%%%%%%
+
+
